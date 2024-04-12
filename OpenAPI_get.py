@@ -55,8 +55,6 @@ ph_df=pd.concat([ph_df1,ph_df2,ph_df3,ph_df4,ph_df5,ph_df6], ignore_index=True)
 #print(ph_df.columns)
 #print(ph_df)
 
-ph_ar=ph_df.to_numpy()
-
 name=['HPID', 'DUTYADDR', 'DUTYNAME', 'DUTYTEL1', 'DUTYTIME1C', 'DUTYTIME2C',
        'DUTYTIME3C', 'DUTYTIME4C', 'DUTYTIME5C', 'DUTYTIME6C', 'DUTYTIME7C',
        'DUTYTIME8C', 'DUTYTIME1S', 'DUTYTIME2S', 'DUTYTIME3S', 'DUTYTIME4S',

@@ -1,6 +1,12 @@
-# Data
-DataProcessing&amp;MachineLearning
+#열 단위 데이터 형성의 전체 과정입니다.
+#1. OpenAPI로 약국 위치 정보 데이터를 가져와 데이터 프레임으로 만들기
+#2. 외국어 가능 약국 데이터를 다운 받아 데이터 프레임으로 만들기
+#3 약국 위치 정보와 외국어 가능 약국의 데이터프레임을 합치고 중복 행 제거하기
+#4. 완성된 데이터프레임을 열 단위로 나누기
 
+
+#1
+#OpenAPI 데이터 가져오기
 import requests
 import pprint
 import json
@@ -42,6 +48,7 @@ body4=json_ob4['TbPharmacyOperateInfo']['row']
 body5=json_ob5['TbPharmacyOperateInfo']['row']
 body6=json_ob6['TbPharmacyOperateInfo']['row']
 
+#OpenAPI 데이터를 데이터 프레임으로 변경
 import pandas as pd
 import numpy as np
 ph_df1=pd.json_normalize(body1)
@@ -52,14 +59,35 @@ ph_df5=pd.json_normalize(body5)
 ph_df6=pd.json_normalize(body6)
 
 ph_df=pd.concat([ph_df1,ph_df2,ph_df3,ph_df4,ph_df5,ph_df6], ignore_index=True)
-#print(ph_df.columns)
+print(ph_df.columns)
 #print(ph_df)
 
+
+#2
+#외국어 가능 약국 데이터 가져와 데이터 프레임으로 변형
+Fph_df=pd.read_excel("/content/외국어 가능 약국 현황.xlsx", header=2) #저장소 위치가 같아야 합니다.
+Fph_df.drop([0], axis=0, inplace=True)
+Fph_df=Fph_df.rename(columns={'약국이름':'DUTYNAME','주소 (도로명)': 'DUTYADDR', '전화번호':'DUTYTEL1','가능 외국어':'외국어가능','Unnamed: 6': 'English','Unnamed: 7': 'Chinese', 'Unnamed: 8':'Japanese'})
+
+
+#3
+#데이터 프레임 합치기
+Pharmacy_df=pd.concat([ph_df,Fph_df],ignore_index=True)
+
+#데이터 프레임 중복 행 제거(전화번호 기준)
+Pharmacy_df=Pharmacy_df.drop_duplicates(subset=['DUTYTEL1'],keep=False)
+print(Pharmacy_df)
+print(Pharmacy_df.columns)
+
+
+#4
+#데이터 프레임을 열 단위로 나누기
 name=['HPID', 'DUTYADDR', 'DUTYNAME', 'DUTYTEL1', 'DUTYTIME1C', 'DUTYTIME2C',
        'DUTYTIME3C', 'DUTYTIME4C', 'DUTYTIME5C', 'DUTYTIME6C', 'DUTYTIME7C',
        'DUTYTIME8C', 'DUTYTIME1S', 'DUTYTIME2S', 'DUTYTIME3S', 'DUTYTIME4S',
        'DUTYTIME5S', 'DUTYTIME6S', 'DUTYTIME7S', 'DUTYTIME8S', 'POSTCDN1',
-       'POSTCDN2', 'WGS84LON', 'WGS84LAT', 'WORK_DTTM']
+       'POSTCDN2', 'WGS84LON', 'WGS84LAT', 'WORK_DTTM', '연번', '자치구', '외국어가능',
+       'English', 'Chinese', 'Japanese', '비고']
 
 for i in name:
-    globals()["{}".format(i)]=ph_df[i].to_numpy()
+    globals()["{}".format(i)]=Pharmacy_df[i].to_numpy()

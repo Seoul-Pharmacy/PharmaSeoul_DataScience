@@ -7,7 +7,7 @@ Pharmacy_df=Pharmacy_df.rename(columns={'HPID':'id','DUTYNAME':'name','시':'si'
        'DUTYTIME8C':'holiday_close_time', 'DUTYTIME1S':'mon_open_time', 'DUTYTIME2S':'tue_open_time', 'DUTYTIME3S':'wed_open_time', 'DUTYTIME4S':'thu_open_time',
        'DUTYTIME5S':'fir_open_time', 'DUTYTIME6S':'sat_open_time', 'DUTYTIME7S':'sun_open_time', 'DUTYTIME8S':'holiday_open_time'})
 
-#데이터프레임의 각 열을 딕셔너리 형식으로 변경
+#데이터프레임의 각 열을 딕셔너리 형식으로 변경((생략 가능)
 Name=['id', 'DUTYADDR', 'name', 'DUTYTEL1', 'mon_close_time',
        'tue_close_time', 'wed_close_time', 'thu_close_time', 'fri_close_time',
        'sat_close_time', 'sun_close_time', 'holiday_close_time',
@@ -18,5 +18,8 @@ Name=['id', 'DUTYADDR', 'name', 'DUTYTEL1', 'mon_close_time',
        'speaking_japanese', '비고', 'si', 'gu', 'road_name_address']
 for i in Name:
     globals()["{}".format(i)]={i:Pharmacy_df[i].to_list()}
+
+#데이터프레임을 딕셔너리 형식으로 변경
+data=Pharmacy_df.to_dict('list')
 
 #DB에 저장

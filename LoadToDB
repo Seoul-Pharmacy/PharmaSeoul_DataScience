@@ -20,6 +20,6 @@ for i in Name:
     globals()["{}".format(i)]={i:Pharmacy_df[i].to_list()}
 
 #데이터프레임을 딕셔너리 형식으로 변경
-data=Pharmacy_df.to_dict('list')
+data=Pharmacy_df.to_dict('records')
 
 #DB에 저장

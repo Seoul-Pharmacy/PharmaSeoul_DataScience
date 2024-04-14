@@ -1,8 +1,10 @@
 #열 단위 데이터 형성의 전체 과정입니다.
 #1. OpenAPI로 약국 위치 정보 데이터를 가져와 데이터 프레임으로 만들기
 #2. 외국어 가능 약국 데이터를 다운 받아 데이터 프레임으로 만들기
-#3 약국 위치 정보와 외국어 가능 약국의 데이터프레임을 합치고 중복 행 제거하기
-#4. 완성된 데이터프레임을 열 단위로 나누기
+#3. 약국 위치 정보와 외국어 가능 약국의 데이터프레임을 합치고 중복 행 제거하기
+#4. 데이터프레임을 열 단위로 나누기
+#5. 주소를 시, 구, 도로명 단위로 만들어 데이터프레임에 추가
+
 
 
 #1
@@ -10,12 +12,14 @@
 import requests
 import pprint
 import json
-url1="http://openapi.seoul.go.kr:8088/697865454c70687234314278716f6f/json/TbPharmacyOperateInfo/1/1000/"
-url2="http://openapi.seoul.go.kr:8088/697865454c70687234314278716f6f/json/TbPharmacyOperateInfo/1001/2000/"
-url3="http://openapi.seoul.go.kr:8088/697865454c70687234314278716f6f/json/TbPharmacyOperateInfo/2001/3000/"
-url4="http://openapi.seoul.go.kr:8088/697865454c70687234314278716f6f/json/TbPharmacyOperateInfo/3001/4000/"
-url5="http://openapi.seoul.go.kr:8088/697865454c70687234314278716f6f/json/TbPharmacyOperateInfo/4001/5000/"
-url6="http://openapi.seoul.go.kr:8088/697865454c70687234314278716f6f/json/TbPharmacyOperateInfo/5001/5894/"
+import pandas as pd
+import numpy as np
+url1="http://openapi.seoul.go.kr:8088/보안키/json/TbPharmacyOperateInfo/1/1000/"
+url2="http://openapi.seoul.go.kr:8088/보안키/json/TbPharmacyOperateInfo/1001/2000/"
+url3="http://openapi.seoul.go.kr:8088/보안키/json/TbPharmacyOperateInfo/2001/3000/"
+url4="http://openapi.seoul.go.kr:8088/보안키/json/TbPharmacyOperateInfo/3001/4000/"
+url5="http://openapi.seoul.go.kr:8088/보안키/json/TbPharmacyOperateInfo/4001/5000/"
+url6="http://openapi.seoul.go.kr:8088/보안키/json/TbPharmacyOperateInfo/5001/5894/"
 
 response1=requests.get(url1)
 contents1=response1.text
@@ -49,8 +53,6 @@ body5=json_ob5['TbPharmacyOperateInfo']['row']
 body6=json_ob6['TbPharmacyOperateInfo']['row']
 
 #OpenAPI 데이터를 데이터 프레임으로 변경
-import pandas as pd
-import numpy as np
 ph_df1=pd.json_normalize(body1)
 ph_df2=pd.json_normalize(body2)
 ph_df3=pd.json_normalize(body3)
@@ -60,7 +62,6 @@ ph_df6=pd.json_normalize(body6)
 
 ph_df=pd.concat([ph_df1,ph_df2,ph_df3,ph_df4,ph_df5,ph_df6], ignore_index=True)
 print(ph_df.columns)
-#print(ph_df)
 
 
 #2
@@ -74,10 +75,17 @@ Fph_df=Fph_df.rename(columns={'약국이름':'DUTYNAME','주소 (도로명)': 'D
 #데이터 프레임 합치기
 Pharmacy_df=pd.concat([ph_df,Fph_df],ignore_index=True)
 
-#데이터 프레임 중복 행 제거(전화번호 기준)
+#데이터 프레임 중복 제거
 Pharmacy_df=Pharmacy_df.drop_duplicates(subset=['DUTYTEL1'],keep=False)
+
+#자치구 열 삭제
+Pharmacy_df=Pharmacy_df.drop('자치구', axis=1)
+
+#위도, 경도의 NaN을 False로 변경
+Pharmacy_df['WGS84LON'].fillna(False, inplace=True)
+Pharmacy_df['WGS84LAT'].fillna(False, inplace=True)
+
 print(Pharmacy_df)
-print(Pharmacy_df.columns)
 
 
 #4
@@ -91,3 +99,23 @@ name=['HPID', 'DUTYADDR', 'DUTYNAME', 'DUTYTEL1', 'DUTYTIME1C', 'DUTYTIME2C',
 
 for i in name:
     globals()["{}".format(i)]=Pharmacy_df[i].to_numpy()
+
+
+#5
+#DUTYADDR -> 시, 구 ,도로명으로 파싱
+DUTYADDR_tokened=[]
+시=[]
+구=[]
+도로명=[]
+for i in range(0,5214):
+    DUTYADDR_tokened+=DUTYADDR[i].split(' ',maxsplit=2)
+    시.append(DUTYADDR_tokened[0+(i-1)*3])
+    구.append(DUTYADDR_tokened[1+(i-1)*3])
+    도로명.append(DUTYADDR_tokened[2+(i-1)*3])
+
+#시, 구, 도로명 정보를 dataframe에 추가
+Pharmacy_df['시']=시
+Pharmacy_df['구']=구
+Pharmacy_df['도로명']=도로명
+
+print(Pharmacy_df.columns)

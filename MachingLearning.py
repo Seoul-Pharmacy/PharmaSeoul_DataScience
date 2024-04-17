@@ -1,6 +1,9 @@
+!pip install haversine
+
 from sklearn.neighbors import KNeighborsRegressor
 from haversine import haversine
 
+#사용자의 위도, 경도를 통해 datas에서 사용자와 가장 가까운 약국의 정보를 가진 딕셔너리 5개와 해당 딕셔너리에 거리를 추가하여 return.
 def get_pharmacy(datas, user_latitude, user_longitude):
     
     filtered_longitude=[]
@@ -15,13 +18,13 @@ def get_pharmacy(datas, user_latitude, user_longitude):
 
     kn=KNeighborsRegressor()
 
-    kn.fit(filtered_latitude_array.reshape(-1,1), filtered_longitude_array.reshape(-1,1)) #드롭다운 된 경도, 위도를 통해 학습합니다.
+    kn.fit(filtered_latitude_array.reshape(-1,1), filtered_longitude_array.reshape(-1,1))
     distances, indexes=kn.kneighbors([user_latitude])
   
     for i in indexes[0]:
         datas_results.append(datas[i])
     
     for i in indexes[0]:
-        datas[i]["distance"]=(str(haversine((float(user_latitude[0]), float(user_longitude[0])),(float(datas[i]['latitude']),float(datas[i]['longitude']))))+"km") #사용자로부터 가까운 5개 약국과의 거리를 저장합니다.
+        datas[i]["distance"]=(str(haversine((float(user_latitude[0]), float(user_longitude[0])),(float(datas[i]['latitude']),float(datas[i]['longitude']))))+"km")
 
     return datas_results

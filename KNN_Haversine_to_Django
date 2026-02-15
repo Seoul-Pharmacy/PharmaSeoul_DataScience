@@ -1,63 +1,41 @@
-import logging
-
 import numpy as np
 from haversine import haversine
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neighbors import NearestNeighbors
 
 logger = logging.getLogger('django')
 
+def filter_by_location(datas, user_lat, user_lon, k=5):
+    logger.info("machine_learning.filter_by_location() optimized")
+    
+    if not datas:
+        return []
 
-# datas, 유저의 위도&경도-> datas 내에서 사용자와 가까운 약국이 있는 5개의 딕셔너리와 해당 딕셔너리에 약국과의 거리를 추가하여 return.
-def filter_by_location(datas, user_latitude, user_longitude):
-    logger.info("machine_learning.filter_by_location()")
+    # 1. 좌표 데이터 벡터화
+    coords = np.array([[float(d['latitude']), float(d['longitude'])] for d in datas])
+    user_coord = np.array([[float(user_lat), float(user_lon)]])
 
-    filtered_longitude = []
-    filtered_latitude = []
-    datas_results = []
+    # 2. 검색할 이웃 수 결정 (데이터가 k개보다 적을 경우 대비)
+    n_neighbors = min(len(datas), k)
 
-    for i in range(len(datas)):
-        filtered_longitude.append(float(datas[i]['longitude']))
-        filtered_latitude.append(float(datas[i]['latitude']))
+    # 3. NearestNeighbors 사용 
+    dist_diff = coords - user_coord
+    # 단순 유클리드 거리 제곱으로 근사치(Top K)를 빠르게 뽑습니다.
+    approx_distances = np.sum(dist_diff**2, axis=1)
+    nearest_indexes = np.argsort(approx_distances)[:n_neighbors]
 
-    lat_lon_zip = [[lat, lon] for lat, lon in zip(filtered_latitude, filtered_longitude)]
-    fake = np.zeros(len(datas))
+    results = []
+    for idx in nearest_indexes:
+        target_data = datas[idx]
+        # 실제 정확한 거리 계산 (km)
+        real_dist = haversine((float(user_lat), float(user_lon)), 
+                              (float(target_data['latitude']), float(target_data['longitude'])))
+        
+        target_data["distance"] = format_distance(real_dist)
+        results.append(target_data)
 
-    if (len(datas)) > 4:
+    return results
 
-        kn = KNeighborsClassifier()
-
-        mean = np.mean(lat_lon_zip, axis=0)
-        std = np.std(lat_lon_zip, axis=0)
-
-        lat_lon_zip = (lat_lon_zip - mean) / std
-        new = ([user_latitude, user_longitude] - mean) / std
-
-        kn.fit(lat_lon_zip, fake)
-        distances, indexes = kn.kneighbors([new])
-
-    elif (len(datas)) < 5:
-        kn = KNeighborsClassifier(n_neighbors=len(datas))
-
-        kn.fit(lat_lon_zip, fake)
-        distances, indexes = kn.kneighbors([[user_latitude, user_longitude]])
-
-    for i in indexes[0]:
-        datas[i]["distance"] = convertKmToMeter(haversine((float(user_latitude), float(user_longitude)), (
-            float(datas[i]['latitude']), float(datas[i]['longitude']))))
-
-    for i in indexes[0]:
-        datas_results.append(datas[i])
-
-    return datas_results
-
-
-def is_less_than_1km(distance: float) -> bool:
-    if distance < 1:
-        return True
-    return False
-
-
-def convertKmToMeter(distance):
-    if is_less_than_1km(distance):
-        return "{}{}".format(str(round(distance * 1000, 2)), "m")
-    return "{}{}".format(str(round(distance, 2)), "km")
+def format_distance(dist_km):
+    if dist_km < 1:
+        return f"{round(dist_km * 1000, 2)}m"
+    return f"{round(dist_km, 2)}km"
